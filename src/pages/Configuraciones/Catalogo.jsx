@@ -1,113 +1,195 @@
 import React, { useEffect, useState } from 'react';
 import SelectFromApi from '@/components/SelectFromApi';
-import axios from 'axios';
-import ModalCenco from '@/components/ModalCenco';
+import { formatearFecha, formatearMoneda } from "@/utils/formatters";
+import {
+  FaPlus,
+} from "react-icons/fa";
+import ModalMaestroCatalogo from '@/components/ModalMaestroCatalogo';
+import { useMsal } from "@azure/msal-react";
+import apiClient from '@/utils/apiClient';
+import { toast } from 'react-toastify';
+import Modalcatalogo from '../../components/Modalcatalogo';
 
-export default function Catalogo() {
-  const [formData, setFormData] = useState(null);
-  const [centros, setCentros] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedCentro, setSelectedCentro] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modo, setModo] = useState('crear'); // 'crear' o 'editar'
 
-  const token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IkpZaEFjVFBNWl9MWDZEQmxPV1E3SG4wTmVYRSIsImtpZCI6IkpZaEFjVFBNWl9MWDZEQmxPV1E3SG4wTmVYRSJ9.eyJhdWQiOiJhcGk6Ly85Mzc1YjczYS1mODEzLTQ2OGMtYWVkZS0wYTRkYjY5NzM5OGMiLCJpc3MiOiJodHRwczovL3N0cy53aW5kb3dzLm5ldC9kM2M3OWRjNS1hMTAzLTQxMjYtOTc5Yy05NWJmYTNiODQ0MWIvIiwiaWF0IjoxNzUzODE4NTcyLCJuYmYiOjE3NTM4MTg1NzIsImV4cCI6MTc1MzgyMjk1OCwiYWNyIjoiMSIsImFpbyI6IkFYUUFpLzhaQUFBQU42dm1HeHMvbTVmY3ZUMXBCNjBoVndRKytmZjQ0WHloOERrTXpkYTRmRHJNM1BPcWdkTStUbXZ1S0R2QkZUT0UrRmZwNlBzTVRsN1B0RzIxaWxhRm1BbW1obFJkQytCdDN1SDBoZERNaVNFZ1N3RWNOSXdQOHpDdDRVa0VtR04zUHdCUHVGZ09Uc3R0WHRQK282Y0NWZz09IiwiYW1yIjpbInB3ZCJdLCJhcHBpZCI6IjkzNzViNzNhLWY4MTMtNDY4Yy1hZWRlLTBhNGRiNjk3Mzk4YyIsImFwcGlkYWNyIjoiMSIsImZhbWlseV9uYW1lIjoiQWNldmVkbyBGZXJuYW5kZXoiLCJnaXZlbl9uYW1lIjoiUm9kcmlnbyIsImlwYWRkciI6IjE1Mi4yMzEuOTAuMiIsIm5hbWUiOiJSb2RyaWdvIEFjZXZlZG8gRmVybmFuZGV6Iiwib2lkIjoiMjUxNTk5NmItZWVjMS00YjZmLThjY2YtOGEyZTQ1NjViN2RmIiwib25wcmVtX3NpZCI6IlMtMS01LTIxLTMyMDEyNTgwOTgtMzA2MjQxMjIzOS0yNTcwOTIyNTMwLTM3MzYiLCJyaCI6IjEuQVZrQXhaM0gwd09oSmtHWG5KV19vN2hFR3pxM2RaTVQtSXhHcnQ0S1RiYVhPWXhaQUJoWkFBLiIsInNjcCI6ImFwaS5yZWFkIiwic2lkIjoiMDA2ZjFkNjktZTE1OS1jZmFkLWM1MzgtMWI5NjYwZjRkMzI5Iiwic3ViIjoiQW9TbksyR3ZVeHUxN2Y2OGU4SGQyaTFZMFBWSkFiVXlDa2x5TEtEX0NyWSIsInRpZCI6ImQzYzc5ZGM1LWExMDMtNDEyNi05NzljLTk1YmZhM2I4NDQxYiIsInVuaXF1ZV9uYW1lIjoicmFjZXZlZG9AZXhjb24uY2wiLCJ1cG4iOiJyYWNldmVkb0BleGNvbi5jbCIsInV0aSI6IlpZU0RscWFkcFVDQ29PRUVQT1VoQUEiLCJ2ZXIiOiIxLjAiLCJ4bXNfZnRkIjoic3JxeTc4Q251UEp2bUxYOXRrd05GM2phNkFxVlRnWmliVi1RZFd5VXJPZ0JkWE51YjNKMGFDMWtjMjF6In0.Zr4LYo1UirPbO7NgmG9jQfJuaADB1TYB7X3fkWbBKZ4VzH5sq5G4_U24CHTzPfa-xwoIQp-8-hdaI6rahKgkcewdhZvocTBfKTThE0H8400Rl5-DzEFva1oLMt3L7HVwOP0-TBc41jX818RZj4d55ZCYP7B-ciAa7tyVnd7noy-8OigFT3ogXZNR6K1VWGihpKnJGoFKPwh0z2P5Zp5mq1CrUj2Rd3jAhBE9V3E6GKLJ-o_8BRrnqalcf8XVyWVeP1l_h-PklsgRQ5ZdD0w5AeQikIIbCkoxIkzEIVVM2WsM8J8a-UxEyBXbbZ7sR3ivfaJpgYLqoliCBwjvI95oSQ';
+const Catalogo = () => {
+const [formData, setFormData] = useState(null);
+const [centros, setCentros] = useState([]);
+const [loading, setLoading] = useState(false);
+const [selectedCentro, setSelectedCentro] = useState(null);
+const [modalOpen, setModalOpen] = useState(false);
+const [modalcatalogoOpen, setModalCatalogoOpen] = useState(false);
+const [modo, setModo] = useState('crear'); // 'crear' o 'editar'
+const [Idmaesrtro, setIdmaestro] = useState(''); // 'crear' o 'editar'
+const [error, setError] = useState(null);
 
-  const [filtro, setFiltro] = useState('');
-  const [datos, setDatos] = useState([]);
- const obtenerDatos = async (filtroSeleccionado) => {
-
+const { instance, accounts } = useMsal();
+const usuario = accounts[0]?.name || "No identificado";
+  
+const [filtro, setFiltro] = useState('');
+const [datos, setDatos] = useState([]);
+const obtenerDatos = async (filtroSeleccionado) => {
+    setLoading(true);
     try {
-      const respuesta = await fetch(`/api1/catalogo/MaestroCatalogo/${filtroSeleccionado}`);
-      const resultado = await respuesta.json();
-      console.log(resultado);
-      setDatos(resultado);
+      const result = await apiClient.get(`/catalogo/MaestroCatalogo/${filtroSeleccionado}`);
+      console.log(result);
+      console.log(filtroSeleccionado);
+      setDatos(result);
     } catch (error) {
-      console.error('Error al obtener los datos:', error);
+      console.error("Error al obtener los datos:", error);
+      setError(error.message); // Mostrar mensaje al usuario
+    } finally {
+      setLoading(false); // Desactiva spinner o similar
+    }
+};
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFiltro(value);
+    obtenerDatos(value);
+  };
+
+  const handleSaveda= async (formData) => {
+     try {
+      if (modo === 'crear') {
+        console.log(formData);
+        const result = await apiClient.post('catalogo', formData);
+      } else {
+        const result = await apiClient.put('catalogo', formData);
+      }
+      setModalCatalogoOpen(false);
+      obtenerDatos(filtro);
+    } catch (error) {
+      console.error('Error al guardar:', error);
     }
   };
-  const handleChange = (e) => {
-    const nuevoFiltro = e.target.value;
-    setFiltro(nuevoFiltro);
-    obtenerDatos(nuevoFiltro);
-  };
-const handleSelectChange = (e) => {
-    const { name, value } = e.target;
-     console.log('Cambio select:', name, value);
-    setFormData(prev => ({ ...prev, [name]: value }));
-};
-  const handleUpdate = (centro) => {
-    setFormData(centro);
+  const handleUpdateCatalogo = (item) => {
+    setFormData(item);
     setModo('editar');
-    setModalOpen(true);
+    setIdmaestro(filtro);
+    setModalCatalogoOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setSelectedCentro(null);
-    setShowModal(false);
-    fetchCentros(); // Refresca lista después de actualizar
-  };
 
+if (loading) return <p>Cargando...</p>;
+if (error) return <p style={{ color: "red" }}>Error: {error}</p>;
 
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold mb-4">Catalogos</h2>
-       <div className="grid grid-cols-3 gap-4">
-                      <div className="bg-gray-100 p-4">
-                          <SelectFromApi
-                              label="Maestro Catalogo"
-                              name="maestrocatalogo"
-                              value={ ''}
-                              onChange={handleChange}
-                              endpoint="api1/MaestroCatalogo"
-                              optionValue="idCatalogo"
-                              optionLabel="nombre"
-                              //params={{ activo: true }}
-                              />
-                      </div>
+       <div className="grid grid-cols-1">
+        <div className="bg-gray-100 p-4 w-full md:w-1/3">
+          <div className="flex items-center gap-2">
+            <SelectFromApi
+              label="Maestro Catálogo"
+              name="idCatalogo"
+              value={filtro | ''}
+              onChange={handleChange}
+              endpoint="MaestroCatalogo"
+              optionValue="idCatalogo"
+              optionLabel="nombre"
+            />
+            <button
+              onClick={() => {
+                setFormData({});
+                setModo('crear');
+                setModalOpen(true);
+              }}
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center gap-2"
+            >
+              <FaPlus />
+            </button>
+          </div>
         </div>
+      </div>
+
         <button
           onClick={() => {
             setFormData({});  // Limpia la data
             setModo('crear');
-            setModalOpen(true);
+            if (!filtro || filtro === 'Seleccione') {
+              toast.error("Debe seleccionar un valor antes de continuar");
+              return;
+            }
+            setModalCatalogoOpen(true);
           }}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 flex items-center gap-2"
         >
-          Crear nuevo Catalogo
+          <FaPlus  /> 
+               Crear item catalogo
         </button>
       {loading ? (
         <p>Cargando catalogo...</p>
       ) : (
-         <table className="table-auto w-full border">
+         <table className="min-w-full bg-white border border-gray-200 md:table-fixed table-auto">
         <thead>
           <tr className="bg-gray-100">
+            <th className="border px-4 py-2">Id Catalogo</th>
             <th className="border px-4 py-2">Nombre</th>
             <th className="border px-4 py-2">Descripción</th>
-            <th className="border px-4 py-2">Tipo</th>
+            <th className="border px-4 py-2">Estado</th>
+            <th className="border px-4 py-2">Custom01</th>
+            <th className="border px-4 py-2">Custom02</th>
+            <th className="border px-4 py-2">Custom03</th>
+            <th className="border px-4 py-2">Custom04</th>
+            <th className="border px-4 py-2">Custom05</th>
+            <th className="border px-4 py-2">Custom06</th>
+            <th className="border px-4 py-2">Custom07</th>
+            <th className="border px-4 py-2">Custom08</th>
+            <th className="border px-4 py-2">Custom09</th>
+            <th className="border px-4 py-2">Acciones</th>
           </tr>
         </thead>
         <tbody>
           {datos.map((item) => (
-            <tr key={item.idCencos}>
+            <tr  key={item.idCatalogo}>
+              <td className="border px-4 py-2">{item.idCatalogo}</td>
               <td className="border px-4 py-2">{item.nombre}</td>
               <td className="border px-4 py-2">{item.descripcion}</td>
               <td className="border px-4 py-2">{item.estado}</td>
+              <td className="border px-4 py-2">{item.custom01}</td>
+              <td className="border px-4 py-2">{item.custom02}</td>
+              <td className="border px-4 py-2">{item.custom03}</td>
+              <td className="border px-4 py-2">{item.custom04}</td>
+              <td className="border px-4 py-2">{item.custom05}</td>
+              <td className="border px-4 py-2">{item.custom06}</td>
+              <td className="border px-4 py-2">{formatearFecha(item.custom07)}</td>
+              <td className="border px-4 py-2">{formatearFecha(item.custom08)}</td>
+              <td className="border px-4 py-2">{formatearFecha(item.custom09)}</td>
+               <td className="border px-4 py-2">
+                  <button
+                    className="bg-blue-500 text-white px-2 py-1 rounded mr-2"
+                    onClick={() => handleUpdateCatalogo(item)
+                        }
+                  >
+                    Editar
+                  </button>
+                </td>
             </tr>
           ))}
         </tbody>
       </table>
       )}
 
-      {modalOpen && (
-       <ModalCenco
+     {modalOpen && (
+       <ModalMaestroCatalogo
           isOpen={modalOpen}
+          onSave={handleSaveda}
           onClose={() => setModalOpen(false)}
-          onSave={handleSave}
           initialData={formData}
+          modo={modo}
+        />
+      )}
+       {modalcatalogoOpen && (
+       <Modalcatalogo
+          isOpen={modalcatalogoOpen}
+          onSave={handleSaveda}
+          onClose={() => setModalCatalogoOpen(false)}
+          initialData={formData}
+          Idmaestro={filtro}
           modo={modo}
         />
       )}
     </div>
   );
 }
+
+export default  Catalogo;
